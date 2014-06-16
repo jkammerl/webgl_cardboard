@@ -24,6 +24,7 @@ animate();
 
 function init() {
     container = document.createElement('div');
+    container.innerHTML = '<h3 style="color: white;">Loading mesh.. </h3>';
     document.body.appendChild(container);
 
     light_plane_height = Math.sin((camera_fov / 2.0) * Math.PI / 180) * light_dist * 2.0;
@@ -37,9 +38,9 @@ function init() {
 
     var loader = new THREE.PLYLoader();
     loader.addEventListener('load', function (event) {
-
+	container.innerHTML = '';
+        
         var geometry = event.content;
-
         geometry.computeFaceNormals();
         //geometry.computeVertexNormals();
 
@@ -62,7 +63,8 @@ function init() {
         mesh.material.vertexColors = THREE.FaceColors;
 
         scene.add(mesh);
-
+      
+        container.appendChild(renderer.domElement);
     });
     loader.load('models/me_small2.ply');
 
@@ -83,8 +85,6 @@ function init() {
 
     renderer.shadowMapEnabled = true;
     renderer.shadowMapCullFace = THREE.CullFaceBack;
-
-    container.appendChild(renderer.domElement);
 
     // EVENTS
     window.addEventListener('resize', onWindowResize, false);
@@ -119,7 +119,6 @@ function animate() {
     requestAnimationFrame(animate);
 
     render();
-    stats.update();
 }
 
 function render() {
