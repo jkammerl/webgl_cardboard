@@ -89,6 +89,13 @@ function init() {
     // EVENTS
     window.addEventListener('resize', onWindowResize, false);
     document.addEventListener('mousemove', onDocumentMouseMove, false);
+
+    // Setup canvas and expose context via ctx variable
+    container.addEventListener('touchmove', function(event) {
+        event.preventDefault();
+        mouseX = event.touches[0].clientX - windowHalfX;
+        mouseY = event.touches[0].clientY - windowHalfY;
+    }, false);
 }
 
 
