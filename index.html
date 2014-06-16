@@ -1,204 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>three.js webgl - STL</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-				font-family: Monospace;
-				background-color: #000000;
-				margin: 0px;
-				overflow: hidden;
-			}
 
-			#info {
-				color: #fff;
-				position: absolute;
-				top: 10px;
-				width: 100%;
-				text-align: center;
-				z-index: 100;
-				display:block;
+<head>
+    <title>J U L I U S _ K A M M E R L</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+        body {
+            font-family: Monospace;
+            background-color: #000000;
+            margin: 0px;
+            overflow: hidden;
+        }
+    </style>
+</head>
 
-			}
+<body>
 
-			a { color: skyblue }
-			.button { background:#999; color:#eee; padding:0.2em 0.5em; cursor:pointer }
-			.highlight { background:orange; color:#fff; }
+    <script src="js/three.min.js"></script>
+    <script src="js/PLYLoader.js"></script>
+    <script src="js/Detector.js"></script>
 
-			span {
-				display: inline-block;
-				width: 60px;
-				float: left;
-				text-align: center;
-			}
+    <script>
+        if (!Detector.webgl) Detector.addGetWebGLMessage();
 
-		</style>
-	</head>
-	<body>
-		<div id="info">
-			<a href="http://threejs.org" target="_blank">three.js</a> -
-			STL loader test by <a href="https://github.com/aleeper">aleeper</a>. PR2 head from <a href="http://www.ros.org/wiki/pr2_description">www.ros.org</a>
-		</div>
+        var container, stats;
+        var camera, scene, renderer, light1, mesh, material;
 
-		<script src="js/three.min.js"></script>
+        var mouseX = 0,
+            mouseY = 0;
+        var windowHalfX = window.innerWidth / 2;
+        var windowHalfY = window.innerHeight / 2;
 
-		<script src="js/STLLoader.js"></script>
-		<script src="js/TypedGeometry.js"></script>
+        var obj_pos = new THREE.Vector3(0, 0, 3);
+        var camera_pos = new THREE.Vector3(0, 0, 0);
+        var camera_fov = 35
 
-		<script src="js/Detector.js"></script>
-		<script src="js/stats.min.js"></script>
+        var light_dist = 2.5;
 
-		<script>
+        var light_plane_height, light_plane_width;
 
-			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+        var material_specular = new THREE.Color(0.21, 0.21, 0.21);
 
-			var container, stats;
+        init();
+        animate();
 
-			var camera, cameraTarget, scene, renderer;
+        function init() {
+            container = document.createElement('div');
+            document.body.appendChild(container);
 
-			init();
-			animate();
+            light_plane_height = Math.sin((camera_fov / 2.0) * Math.PI / 180) * light_dist * 2.0;
+        	var aspect_ratio = window.innerWidth / window.innerHeight;
+        	light_plane_width = light_plane_height * aspect_ratio;
 
-			function init() {
+            camera = new THREE.PerspectiveCamera(camera_fov, window.innerWidth / window.innerHeight, 0.1, 15);
+            camera.position = camera_pos;
 
-				container = document.createElement( 'div' );
-				document.body.appendChild( container );
+            scene = new THREE.Scene();
 
-				camera = new THREE.PerspectiveCamera( 35, window.innerWidth / window.innerHeight, 1, 15 );
-				camera.position.set( 3, 0.15, 3 );
+            var loader = new THREE.PLYLoader();
+            loader.addEventListener('load', function (event) {
 
-				cameraTarget = new THREE.Vector3( 0, -0.25, 0 );
+                var geometry = event.content;
 
-				scene = new THREE.Scene();
-				scene.fog = new THREE.Fog( 0x72645b, 2, 15 );
+                geometry.computeFaceNormals();
+                //geometry.computeVertexNormals();
 
+                material = new THREE.MeshPhongMaterial({
+                    ambient: 0xAAAAAA,
+                    color: 0xFFFFFF,
+                    shininess: 50,
+                    shading: THREE.SmoothShading,
+                    metal: false
+                });
+                material.specular = material_specular;
+                mesh = new THREE.Mesh(geometry, material);
 
-				// Ground
+                mesh.position = obj_pos;
+                mesh.rotation.set(0, Math.PI, +Math.PI / 2);
+                mesh.scale.set(0.01, 0.01, 0.01);
 
-				var plane = new THREE.Mesh( new THREE.PlaneGeometry( 40, 40 ), new THREE.MeshPhongMaterial( { ambient: 0x999999, color: 0x999999, specular: 0x101010 } ) );
-				plane.rotation.x = -Math.PI/2;
-				plane.position.y = -0.5;
-				scene.add( plane );
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                mesh.material.vertexColors = THREE.FaceColors;
 
-				plane.receiveShadow = true;
+                scene.add(mesh);
 
+            });
+            loader.load('models/me_small2.ply');
 
-				// ASCII file
+            light1 = new THREE.PointLight(0xffffff, 0.498, 2.145);
+            light1.position.x = (0.5 / window.innerWidth) * light_plane_width * -1;
+            light1.position.y = (0.5 / window.innerHeight) * light_plane_height * -1;
+            light1.position.z = light_dist;
+            scene.add(light1);
 
-				var loader = new THREE.STLLoader();
-				loader.addEventListener( 'load', function ( event ) {
+            // renderer
+            renderer = new THREE.WebGLRenderer({
+                antialias: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
 
-					var geometry = event.content;
-					var material = new THREE.MeshPhongMaterial( { ambient: 0xff5533, color: 0xff5533, specular: 0x111111, shininess: 200 } );
-					var mesh = new THREE.Mesh( geometry, material );
+            renderer.gammaInput = true;
+            renderer.gammaOutput = true;
 
-					mesh.position.set( 0, - 0.25, 0.6 );
-					mesh.rotation.set( 0, - Math.PI / 2, 0 );
-					mesh.scale.set( 0.5, 0.5, 0.5 );
+            renderer.shadowMapEnabled = true;
+            renderer.shadowMapCullFace = THREE.CullFaceBack;
 
-					mesh.castShadow = true;
-					mesh.receiveShadow = true;
+            container.appendChild(renderer.domElement);
 
-					scene.add( mesh );
+            // EVENTS
+            window.addEventListener('resize', onWindowResize, false);
+            document.addEventListener('mousemove', onDocumentMouseMove, false);
+        }
 
-				} );
-				loader.load( './models/me.stl' );
 
+        function onWindowResize() {
+            windowHalfX = window.innerWidth / 2;
+            windowHalfY = window.innerHeight / 2;
 
-				// Lights
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
 
-				scene.add( new THREE.AmbientLight( 0x777777 ) );
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
 
-				addShadowedLight( 1, 1, 1, 0xffffff, 1.35 );
-				addShadowedLight( 0.5, 1, -1, 0xffaa00, 1 );
+        function onDocumentMouseMove(event) {
+            mouseX = (event.clientX - windowHalfX);
+            mouseY = (event.clientY - windowHalfY);
+        }
 
-				// renderer
+        function animate() {
 
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
-				renderer.setSize( window.innerWidth, window.innerHeight );
+            requestAnimationFrame(animate);
 
-				renderer.setClearColor( scene.fog.color, 1 );
+            render();
+            stats.update();
+        }
 
-				renderer.gammaInput = true;
-				renderer.gammaOutput = true;
+        function render() {
+            light1.position.x = (mouseX / window.innerWidth) * light_plane_width * -1;
+            light1.position.y = (mouseY / window.innerHeight) * light_plane_height * -1;
+            light1.position.z = light_dist;
 
-				renderer.shadowMapEnabled = true;
-				renderer.shadowMapCullFace = THREE.CullFaceBack;
+            var targetX = mouseX * .0005 + Math.PI;
+            var targetY = mouseY * -.0005;
 
-				container.appendChild( renderer.domElement );
+            if (mesh) {
+                mesh.rotation.y += 0.05 * (targetX - mesh.rotation.y);
+                mesh.rotation.x += 0.05 * (targetY - mesh.rotation.x);
 
-				// stats
+            }
 
-				stats = new Stats();
-				stats.domElement.style.position = 'absolute';
-				stats.domElement.style.top = '0px';
-				container.appendChild( stats.domElement );
+            camera.lookAt(obj_pos);
 
-				//
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
 
-				window.addEventListener( 'resize', onWindowResize, false );
-
-			}
-
-			function addShadowedLight( x, y, z, color, intensity ) {
-
-				var directionalLight = new THREE.DirectionalLight( color, intensity );
-				directionalLight.position.set( x, y, z )
-				scene.add( directionalLight );
-
-				directionalLight.castShadow = true;
-				// directionalLight.shadowCameraVisible = true;
-
-				var d = 1;
-				directionalLight.shadowCameraLeft = -d;
-				directionalLight.shadowCameraRight = d;
-				directionalLight.shadowCameraTop = d;
-				directionalLight.shadowCameraBottom = -d;
-
-				directionalLight.shadowCameraNear = 1;
-				directionalLight.shadowCameraFar = 4;
-
-				directionalLight.shadowMapWidth = 1024;
-				directionalLight.shadowMapHeight = 1024;
-
-				directionalLight.shadowBias = -0.005;
-				directionalLight.shadowDarkness = 0.15;
-
-			}
-
-			function onWindowResize() {
-
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-
-				renderer.setSize( window.innerWidth, window.innerHeight );
-
-			}
-
-			function animate() {
-
-				requestAnimationFrame( animate );
-
-				render();
-				stats.update();
-
-			}
-
-			function render() {
-
-				var timer = Date.now() * 0.0005;
-
-				camera.position.x = Math.cos( timer ) * 3;
-				camera.position.z = Math.sin( timer ) * 3;
-
-				camera.lookAt( cameraTarget );
-
-				renderer.render( scene, camera );
-
-			}
-
-		</script>
-	</body>
 </html>
