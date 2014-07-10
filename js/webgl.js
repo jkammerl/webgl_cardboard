@@ -131,10 +131,10 @@ function animate() {
 
 function update() {
   onWindowResize();
-  camera.updateProjectionMatrix();
   if (controls) {
       controls.update();
   }
+  clock.getDelta();
 }
 
 
