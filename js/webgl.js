@@ -29,8 +29,8 @@ function init() {
     document.body.appendChild(container);
 
     var light_plane_height = Math.sin((camera_fov / 2.0) * Math.PI / 180) * light_dist * 2.0;
-	var aspect_ratio = window.innerWidth / window.innerHeight;
-	var light_plane_width = light_plane_height * aspect_ratio;
+    var aspect_ratio = window.innerWidth / window.innerHeight;
+    var light_plane_width = light_plane_height * aspect_ratio;
     light_plane_height_half = light_plane_height / 2.0;
     light_plane_width_half = light_plane_width / 2.0;
 
@@ -50,10 +50,8 @@ function init() {
             controls = new THREE.DeviceOrientationControls(camera, true);
             controls.connect();
             controls.update();
-            // Prevent mobile device from sleeping
-            noSleep.enable();
         }
-        window.removeEventListener('deviceorientation', setOrientationControls);
+        window.removeEventListener('deviceorientation', setOrientationControls.bind(this));
     }
     window.addEventListener('deviceorientation', setOrientationControls, true);
 
@@ -86,13 +84,15 @@ function init() {
         scene.add(mesh);
       
         container.appendChild(renderer.domElement);
+
+        noSleep.enable();
     });
     loader.load('models/me_small2.ply');
 
     light1 = new THREE.PointLight(0xffffff, 0.898, 15.145);
     scene.add(light1);
 
-    // renderer
+    // RENDERER
     renderer = new THREE.WebGLRenderer({
         antialias: true
     });
@@ -120,18 +120,16 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
 
     renderer.setSize(window.innerWidth, window.innerHeight);
-
     effect.setSize(window.innerWidth, window.innerHeight);
 }
 
 function animate() {
     requestAnimationFrame(animate);
-
-    update(clock.getDelta());
-    render(clock.getDelta());
+    update();
+    render();
 }
 
-function update(dt) {
+function update() {
   onWindowResize();
   camera.updateProjectionMatrix();
   if (controls) {
