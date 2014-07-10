@@ -1,6 +1,6 @@
-jkammerl.github.io
+webgl_cardboard
 ==================
 
-WebGL experiment using three.js point lights
+Experimenting with WebGL for Google cardboard
 
-Visit: http://jkammerl.github.io/
+Visit: http://www.kammerl.de/cardboard

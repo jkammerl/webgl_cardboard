@@ -1,21 +1,20 @@
 
 if (!Detector.webgl) Detector.addGetWebGLMessage();
-
+var noSleep;
 var container, stats;
-var camera, scene, renderer, light1, mesh, material;
+var camera, scene, renderer, light1, mesh, material, effect, clock, controls;
 
-var mouseX = 0,
-    mouseY = 0;
 var windowHalfX = window.innerWidth / 2;
 var windowHalfY = window.innerHeight / 2;
 
-var obj_pos = new THREE.Vector3(0, 0, 3);
+var obj_pos = new THREE.Vector3(0, 0, 12);
 var camera_pos = new THREE.Vector3(0, 0, 0);
-var camera_fov = 35
+var camera_fov = 90
 
-var light_dist = 2.5;
+var light_dist = 3.5;
+var light_radius = 1.0;
 
-var light_plane_height, light_plane_width;
+var light_plane_height_half, light_plane_width_half;
 
 var material_specular = new THREE.Color(0.21, 0.21, 0.21);
 
@@ -23,40 +22,62 @@ init();
 animate();
 
 function init() {
+    noSleep = new NoSleep();
+
     container = document.createElement('div');
     container.innerHTML = '<h3 style="color: white;">Loading mesh.. </h3>';
     document.body.appendChild(container);
 
-    light_plane_height = Math.sin((camera_fov / 2.0) * Math.PI / 180) * light_dist * 2.0;
+    var light_plane_height = Math.sin((camera_fov / 2.0) * Math.PI / 180) * light_dist * 2.0;
 	var aspect_ratio = window.innerWidth / window.innerHeight;
-	light_plane_width = light_plane_height * aspect_ratio;
+	var light_plane_width = light_plane_height * aspect_ratio;
+    light_plane_height_half = light_plane_height / 2.0;
+    light_plane_width_half = light_plane_width / 2.0;
 
-    camera = new THREE.PerspectiveCamera(camera_fov, window.innerWidth / window.innerHeight, 0.1, 15);
+    camera = new THREE.PerspectiveCamera(camera_fov, 1, 0.001, 700);
     camera.position = camera_pos;
+    camera.lookAt(obj_pos);
 
     scene = new THREE.Scene();
 
+    clock = new THREE.Clock(true);
+
+    function setOrientationControls(e) {
+        if (!e.alpha) {
+          return;
+        }
+        if (controls == null) {
+            controls = new THREE.DeviceOrientationControls(camera, true);
+            controls.connect();
+            controls.update();
+            // Prevent mobile device from sleeping
+            noSleep.enable();
+        }
+        window.removeEventListener('deviceorientation', setOrientationControls);
+    }
+    window.addEventListener('deviceorientation', setOrientationControls, true);
+
     var loader = new THREE.PLYLoader();
     loader.addEventListener('load', function (event) {
-	container.innerHTML = '';
+	    container.innerHTML = '';
         
         var geometry = event.content;
         geometry.computeFaceNormals();
-        //geometry.computeVertexNormals();
 
         material = new THREE.MeshPhongMaterial({
             ambient: 0xAAAAAA,
             color: 0xFFFFFF,
-            shininess: 50,
+            shininess: 15,
             shading: THREE.SmoothShading,
-            metal: false
+            metal: false,
+            side: THREE.DoubleSide
         });
         material.specular = material_specular;
         mesh = new THREE.Mesh(geometry, material);
 
         mesh.position = obj_pos;
         mesh.rotation.set(0, Math.PI, +Math.PI / 2);
-        mesh.scale.set(0.01, 0.01, 0.01);
+        mesh.scale.set(0.1, 0.1, 0.1);
 
         mesh.castShadow = true;
         mesh.receiveShadow = true;
@@ -68,10 +89,7 @@ function init() {
     });
     loader.load('models/me_small2.ply');
 
-    light1 = new THREE.PointLight(0xffffff, 0.498, 2.145);
-    light1.position.x = (0.5 / window.innerWidth) * light_plane_width * -1;
-    light1.position.y = (0.5 / window.innerHeight) * light_plane_height * -1;
-    light1.position.z = light_dist;
+    light1 = new THREE.PointLight(0xffffff, 0.898, 15.145);
     scene.add(light1);
 
     // renderer
@@ -86,16 +104,11 @@ function init() {
     renderer.shadowMapEnabled = true;
     renderer.shadowMapCullFace = THREE.CullFaceBack;
 
+    effect = new THREE.StereoEffect(renderer);
+
     // EVENTS
     window.addEventListener('resize', onWindowResize, false);
-    document.addEventListener('mousemove', onDocumentMouseMove, false);
-
-    // Setup canvas and expose context via ctx variable
-    container.addEventListener('touchmove', function(event) {
-        event.preventDefault();
-        mouseX = event.touches[0].clientX - windowHalfX;
-        mouseY = event.touches[0].clientY - windowHalfY;
-    }, false);
+    container.addEventListener('click', fullscreen, false);
 }
 
 
@@ -107,36 +120,51 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
 
     renderer.setSize(window.innerWidth, window.innerHeight);
-}
 
-function onDocumentMouseMove(event) {
-    mouseX = (event.clientX - windowHalfX);
-    mouseY = (event.clientY - windowHalfY);
+    effect.setSize(window.innerWidth, window.innerHeight);
 }
 
 function animate() {
-
     requestAnimationFrame(animate);
 
-    render();
+    update(clock.getDelta());
+    render(clock.getDelta());
 }
 
+function update(dt) {
+  onWindowResize();
+  camera.updateProjectionMatrix();
+  if (controls) {
+      controls.update();
+  }
+}
+
+
 function render() {
-    light1.position.x = (mouseX / window.innerWidth) * light_plane_width * -1;
-    light1.position.y = (mouseY / window.innerHeight) * light_plane_height * -1;
+    light1.position.x = Math.sin(clock.elapsedTime * 1) * light_plane_width_half * light_radius;
+    light1.position.y = Math.cos(clock.elapsedTime * 1) * light_plane_height_half * light_radius;
     light1.position.z = light_dist;
 
-    var targetX = mouseX * .0005 + Math.PI;
-    var targetY = mouseY * -.0005;
+    var targetX = light1.position.x * .07 + Math.PI;
+    var targetY = light1.position.y * -.07 ;
 
     if (mesh) {
         mesh.rotation.y += 0.05 * (targetX - mesh.rotation.y);
         mesh.rotation.x += 0.05 * (targetY - mesh.rotation.x);
-
     }
 
-    camera.lookAt(obj_pos);
+    effect.render(scene, camera);
+}
 
-    renderer.render(scene, camera);
+function fullscreen() {
+  if (container.requestFullscreen) {
+    container.requestFullscreen();
+  } else if (container.msRequestFullscreen) {
+    container.msRequestFullscreen();
+  } else if (container.mozRequestFullScreen) {
+    container.mozRequestFullScreen();
+  } else if (container.webkitRequestFullscreen) {
+    container.webkitRequestFullscreen();
+  }
 }
 
