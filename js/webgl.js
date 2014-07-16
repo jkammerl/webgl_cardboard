@@ -7,12 +7,12 @@ var camera, scene, renderer, light1, mesh, material, effect, clock, controls;
 var windowHalfX = window.innerWidth / 2;
 var windowHalfY = window.innerHeight / 2;
 
-var obj_pos = new THREE.Vector3(0, 0, 12);
+var obj_pos = new THREE.Vector3(0, 0, 22);
 var camera_pos = new THREE.Vector3(0, 0, 0);
 var camera_fov = 90
 
-var light_dist = 3.5;
-var light_radius = 1.0;
+var light_dist = 13.5;
+var light_radius = 0.5;
 
 var light_plane_height_half, light_plane_width_half;
 
